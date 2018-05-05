@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+
+    <script src="Dataset.js"></script>
+    <script type="text/javascript" src="DataFlitered.js"></script> 
+    <script type="text/javascript" src="ChartConfiguration.js"></script>
+    <script type="text/javascript" src="View.js"></script>
+    <script type="text/javascript" src="ChartFactory.js"></script>
+    <script type="text/javascript" src="Controler.js"></script>
+    <script type="text/javascript" src="ChartConfig.js"></script>
+    <script type="text/javascript" src="BarChart.js"></script>
+    <script type="text/javascript" src="StackedBarChart.js"></script>
+    <script type="text/javascript" src="LineChart.js"></script>
+    <script type="text/javascript" src="PieChart.js"></script>
+    <script type="text/javascript" src="Heatmap.js"></script>
+    <script type="text/javascript" src="DoughnutChart.js"></script>
+    <script type="text/javascript" src="HandleDataFrame.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.js"></script>
+    <script src="https://cdn.rawgit.com/Gmousse/dataframe-js/master/dist/dataframe.js"></script>
+    
+
+
+    <link href="app.css" rel="stylesheet"><!-- 
+    <link href="https://fonts.googleapis.com/css?family=Joti+One|Sedgwick+Ave+Display" rel="stylesheet">
+ -->    
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="jumbotron">
+            <h1>Environment Dashboard <i class="fa fa-camera-retro" aria-hidden="true"></i></h1>
+        </div>
+        <div class="center" id="importDiv">
+                <p>
+                    <ul>
+                        <p>
+                            <li>SELECT DATASET FROM <strong>LOCAL FILE</strong> 
+                                <ul>
+                                    <li><input type="file" id="fileinput" onchange="importDataset()"></li>
+                                </ul>
+                            </li>
+                        </p>
+
+
+                        <p>
+                            <li>SELECT DATASET FROM <strong>DROP-DOWN BOX</strong>
+                                
+                                        <select name="Datasets" id="Datasetid" onChange="selectDataset()">
+                                            
+                                            <option value="" disabled="disabled" selected="selected">Please select a dataset</option>
+                                            <option value="armories_data - 20161201">Toxic Armories
+                                            </option>
+                                            <option value="Air_Quality_Survey_Minneapolis">Air_Quality_Survey_Minneapolis</option>
+                                            <option value="download-data-for-Aug-2017-Euro-6" >download-data-for-Aug-2017-Euro-6</option>
+                                            <option value="Oil_and_Gas_Summary_Production_Data__1967-1999">COil_and_Gas_Summary_Production_Data__1967-1999</option>
+                                            <option value="ollution_us_2000_2010">ollution_us_2000_2010</option>
+                                            <option value="ShanghaiPM20100101_20151231_Training - Training">ShanghaiPM20100101_20151231_Training - Training</option>
+                                        </select>
+                            </li>
+                        </p>
+                    </ul>                
+                </p>
+        </div>
+            <div  class='center' id="dataDiv">
+            </div>
+            <div id="dfTable"></div>
+            <div class="center" id="checkboxDiv"></div>
+            <div class="center" id="groupByDiv"></div>
+            <div class="center" id="chartDiv">
+                <div  id="chartSettingDiv">
+                </div>
+                <div class="center" id="canvasDiv"  style="width:90%">
+                    <canvas id="myChart"  width="350" height="350" /></canvas>
+                </div>
+            </div>
+            
+    </div>
+    <div><button type="button" id="showHeatMap" onclick="ShowHeatMap();">ShowHeatMap</button></div>
+    <div id="map" style="height:650px;"></div>
+</body>
+<script>
+    var DataFrame = dfjs.DataFrame;
+    var dataDiv = document.getElementById("dataDiv");
+    var dataset;
+    var controler;
+    var myChart;
+    var view;
+
+    function importDataset(){
+        var datasetname = document.getElementById('fileinput');
+        var s = datasetname.value;   
+
+        s=s.substr(s.lastIndexOf('\\')+1);
+        DataFrame.fromCSV('data/'+s).then(function(df) {
+            dataset = df;
+            main();
+        });
+
+    }
+    
+    function selectDataset(){
+        var datasetname = document.getElementById('Datasetid');
+        //console.log(datasetname.value);
+        DataFrame.fromCSV('data/'+ datasetname.value +'.csv').then((df) => {dataset = df; main();});
+            //this.Showtable(this.columns, this.dataframeArray);
+    }
+
+    
+    function main(){
+        var data=new HandleDataFrame(new DataFrame(dataset));
+        view = new View(data.df);
+        controler=new Controler(view,data);
+        data.registerObservers(view);
+        data.registerObservers(controler);
+        view.createTable(dataDiv,data.df);
+    }
+    
+    function initMap() {
+        this.map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 10,
+            center: {lat: 44.95559695, lng: -93.23913021},
+            mapTypeId: 'terrain'
+        });
+    }
+
+    function ShowHeatMap(){
+        var heatmapData = [];
+        var latitude = dataset.toDict()['Lat'];
+        var longitude = dataset.toDict()['Long'];
+
+        for (var i=0;i<latitude.length;i++) {
+          var latLng = new google.maps.LatLng(latitude[i], longitude[i]);
+          heatmapData.push(latLng);
+        }
+
+        var heatmap = new google.maps.visualization.HeatmapLayer({
+          data: heatmapData,
+          dissipating: false,
+          map: this.map
+        });
+    }
+
+    function selectColumns(){
+        controler.selectColumns();
+        
+    }
+    
+     function addValue(){
+        controler.addValue();
+    }
+
+    function deleteValue(button){
+        controler.deleteValue(button);
+    }
+
+    function groupbyClicked(){
+        controler.groupby();
+    }
+    
+    
+    function filter(){
+        controler.filter();
+    }
+    
+    function addFilterRows(){
+        controler.addFilterRows();
+    }
+    function deleteFilterRows(button){
+        controler.deleteFilterRows(button);
+    }
+     
+    function chartButtonClicked(){
+        controler.chart();
+    }
+
+    
+    
+</script>
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBcOb3F-P1tl0HHNLJZcyDWp7myKhzMN7k&libraries=visualization&callback=initMap">
+</script>
+
+
+</html>
